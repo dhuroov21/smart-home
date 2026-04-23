@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Home</title>
+
+<style>
+:root{
+  --bg1:#0a0f24;
+  --bg2:#001f3f;
+  --card:rgba(255,255,255,0.08);
+  --accent:#00ccff;
+  --on:#00ff9f;
+}
+
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2));
+  color:#fff;
+}
+
+.container{
+  max-width:520px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:var(--card);
+  backdrop-filter:blur(12px);
+  padding:18px;
+  border-radius:16px;
+  margin-bottom:18px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.4);
+  transition:0.3s;
+}
+.card:hover{
+  transform:translateY(-5px);
+}
+
+h2,h3{margin:0 0 10px;}
+
+.relay{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+
+.label{
+  font-size:16px;
+  font-weight:600;
+}
+
+.status-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#555;
+  display:inline-block;
+  margin-left:8px;
+}
+.status-dot.on{
+  background:var(--on);
+  box-shadow:0 0 12px var(--on);
+}
+
+/* Toggle */
+.switch{
+  position:relative;
+  width:50px;
+  height:26px;
+}
+.switch input{display:none;}
+
+.slider{
+  position:absolute;
+  cursor:pointer;
+  background:#555;
+  border-radius:30px;
+  top:0;left:0;right:0;bottom:0;
+  transition:0.3s;
+}
+.slider:before{
+  content:'';
+  position:absolute;
+  height:20px;width:20px;
+  left:3px;top:3px;
+  background:white;
+  border-radius:50%;
+  transition:0.3s;
+}
+
+input:checked + .slider{
+  background:var(--accent);
+}
+input:checked + .slider:before{
+  transform:translateX(24px);
+}
+
+/* Buttons */
+.btn{
+  padding:10px 14px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.on{background:#00cc66;color:#000;}
+.off{background:#ff4d4d;color:#fff;}
+
+/* Light mode */
+body.light{
+  background:#f5f7fa;
+  color:#111;
+}
+body.light .card{
+  background:#fff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- Header -->
+<div class="card">
+  <h2>🏠 Smart Home</h2>
+  <p id="status">System Ready</p>
+  <button class="btn" onclick="toggleTheme()">🌙 Theme</button>
+</div>
+
+<!-- Devices -->
+<div class="card">
+  <h3>Devices</h3>
+
+  <div class="relay">
+    <div class="label">💡 Device 1 <span class="status-dot" id="dot1"></span></div>
+    <label class="switch">
+      <input type="checkbox" id="r1">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="relay">
+    <div class="label">💡 Device 2 <span class="status-dot" id="dot2"></span></div>
+    <label class="switch">
+      <input type="checkbox" id="r2">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="relay">
+    <div class="label">💡 Device 3 <span class="status-dot" id="dot3"></span></div>
+    <label class="switch">
+      <input type="checkbox" id="r3">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="relay">
+    <div class="label">💡 Device 4 <span class="status-dot" id="dot4"></span></div>
+    <label class="switch">
+      <input type="checkbox" id="r4">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+</div>
+
+<!-- Quick Control -->
+<div class="card">
+  <h3>Quick Control</h3>
+  <button class="btn on" onclick="allOn()">All ON</button>
+  <button class="btn off" onclick="allOff()">All OFF</button>
+</div>
+
+<!-- Energy -->
+<div class="card">
+  <h3>Energy Usage</h3>
+  <p id="power">Loading...</p>
+</div>
+
+</div>
+
+<script>
+const baseURL = "https://esp32-4ae9b-default-rtdb.firebaseio.com/";
+
+/* Toggle relay */
+function toggleRelay(id,state){
+  document.getElementById('status').innerText="Updating...";
+  
+  fetch(baseURL+"relay"+id+".json",{
+    method:"PUT",
+    body:JSON.stringify(state?1:0)
+  }).then(()=>{
+    document.getElementById('dot'+id).classList.toggle('on',state);
+    document.getElementById('status').innerText="Updated ✔";
+  });
+}
+
+/* Switch listeners */
+for(let i=1;i<=4;i++){
+  document.getElementById("r"+i).addEventListener("change",function(){
+    toggleRelay(i,this.checked);
+  });
+}
+
+/* Master control */
+function allOn(){
+  for(let i=1;i<=4;i++){
+    document.getElementById("r"+i).checked=true;
+    toggleRelay(i,true);
+  }
+}
+function allOff(){
+  for(let i=1;i<=4;i++){
+    document.getElementById("r"+i).checked=false;
+    toggleRelay(i,false);
+  }
+}
+
+/* Theme */
+function toggleTheme(){
+  document.body.classList.toggle("light");
+}
+
+/* Energy fetch */
+setInterval(()=>{
+  fetch(baseURL+"power.json")
+  .then(r=>r.json())
+  .then(data=>{
+    document.getElementById("power").innerText="Power: "+data+" mW";
+  });
+},2000);
+
+</script>
+
+</body>
+</html>
